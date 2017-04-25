@@ -24,7 +24,7 @@ numbersmain: numbersmain.c lwp.h $(LWP)
 numbersmain-ex: numbersmain.c lwp.h $(LWP-EX)
 	cc -Wall -Werror -g -o $@ $< $(LWP-EX)
 
-$(LWP): lwp.o
+$(LWP): lwp.o smartalloc.o
 	ar r $@ lwp.o
 	ranlib $@
 
