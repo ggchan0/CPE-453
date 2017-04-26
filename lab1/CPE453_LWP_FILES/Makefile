@@ -13,13 +13,13 @@ snakemain-ex: snakemain.c snakes.h $(LWP-EX) $(SN-EX)
 	cc -Wall -Werror -g -o $@ $< $(LWP-EX) $(SN-EX) -lncurses
 
 hungrymain: hungrymain.c snakes.h $(LWP) $(SN-EX)
-	cc -Wall -Werror -g -o $@ $< $(LWP) $(SN-EX) -lncurses
+	cc -m32 -Wall -Werror -g -o $@ $< $(LWP) $(SN-EX) -lncurses
 
 hungrymain-ex: hungrymain.c snakes.h $(LWP-EX) $(SN-EX)
 	cc -Wall -Werror -g -o $@ $< $(LWP-EX) $(SN-EX) -lncurses
 
 numbersmain: numbersmain.c lwp.h $(LWP)
-	cc -Wall -Werror -g -o $@ $< $(LWP)
+	cc -Wall -m32 -Werror -g -o $@ $< $(LWP)
 
 numbersmain-ex: numbersmain.c lwp.h $(LWP-EX)
 	cc -Wall -Werror -g -o $@ $< $(LWP-EX)

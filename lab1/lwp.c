@@ -48,7 +48,6 @@ int lwp_getpid() {
 }
 
 void lwp_yield() {
-   /*
    SAVE_STATE();
    GetSP(lwp_ptable[lwp_running].sp);
    if (global_scheduler == NULL) {
@@ -57,21 +56,16 @@ void lwp_yield() {
       lwp_running = global_scheduler();
    }
    SetSP(lwp_ptable[lwp_running].sp);
-
    RESTORE_STATE();
-   */
-   lwp_stop();
 }
 
 void lwp_exit() {
-   /*
    int i;
    free(lwp_ptable[lwp_running].stack);
    for (i = lwp_running; i < lwp_procs; i++) {
       lwp_ptable[i] = lwp_ptable[i + 1];
    }
    --lwp_procs;
-
    if (lwp_procs == 0) {
       lwp_stop();
    } else {
@@ -83,8 +77,6 @@ void lwp_exit() {
       SetSP(lwp_ptable[lwp_running].sp);
       RESTORE_STATE();
    }
-   */
-   lwp_stop();
 }
 
 void lwp_start() {

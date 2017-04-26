@@ -58,7 +58,6 @@ int main(int argc, char *argv[]){
   for(i=1;i<=5;i++) {
     new_lwp(indentnum,(void*)i,INITIALSTACK);
   }
-  printf("starting\n");
   lwp_start();                     /* returns when the last lwp exits */
 
   printf("Back from LWPS.\n");
@@ -73,7 +72,7 @@ static void indentnum(void *num) {
 
   howfar=(ptr_int_t)num;              /* interpret num as an integer */
   for(i=0;i<howfar;i++){
-    printf("here: %*"PTR_INT_T_FMT"\n",(int)howfar*5,howfar);
+    printf("%*"PTR_INT_T_FMT"\n",(int)howfar*5,howfar);
     lwp_yield();                /* let another have a turn */
   }
   lwp_exit();                   /* bail when done.  This should
