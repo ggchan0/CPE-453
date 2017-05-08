@@ -48,7 +48,6 @@ int lwp_getpid() {
 }
 
 void lwp_yield() {
-   /*
    SAVE_STATE();
    GetSP(lwp_ptable[lwp_running].sp);
    if (global_scheduler == NULL) {
@@ -59,12 +58,9 @@ void lwp_yield() {
    SetSP(lwp_ptable[lwp_running].sp);
 
    RESTORE_STATE();
-   */
-   lwp_stop();
 }
 
 void lwp_exit() {
-   /*
    int i;
    free(lwp_ptable[lwp_running].stack);
    for (i = lwp_running; i < lwp_procs; i++) {
@@ -83,8 +79,6 @@ void lwp_exit() {
       SetSP(lwp_ptable[lwp_running].sp);
       RESTORE_STATE();
    }
-   */
-   lwp_stop();
 }
 
 void lwp_start() {
