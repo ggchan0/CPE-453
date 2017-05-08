@@ -36,6 +36,16 @@ def getSchedule(file):
         procs.append(proc)
     return procs
 
+def executeFIFO(procs):
+    time = 0
+    for proc in procs:
+
+def executeRR(procs):
+    time = 0
+
+def executeSRJN(procs):
+    time = 0
+
 def main():
     if (len(sys.argv) < 2):
         print("Usage: schedSim <job-file.txt> -p <ALGORITHM> -q <QUANTUM>")
@@ -47,9 +57,9 @@ def main():
     print("Algorithm " + algorithm)
     print("Quantum " + str(quantum))
     print(str(len(procs)))
-    new_procs = sorted(procs, key=lambda x: x.arrival_time, reverse=False)
-    for proc in new_procs:
-        print(proc)
+    if (algorithm == "FIFO"):
+        new_procs = sorted(procs, key=lambda x: x.arrival_time, reverse=False)
+        executeFIFO(new_procs)
 
 if __name__ == "__main__":
     main()
