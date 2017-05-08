@@ -1,0 +1,4 @@
+1. Garrett Chan
+2. LWP is different from a real thread management library in the sense that it doesn't conform to any standards (eg POSIX) and is extremely limited. Two ways it could be enhanced is allowing it to take in functions that return other data types than void, and to allow synchronization primities (ie locking).
+3. No special instructions, other than to run make
+4. This program has not been tested with neither hungrymain nor snakesmain

@@ -56,7 +56,6 @@ void lwp_yield() {
       lwp_running = global_scheduler();
    }
    SetSP(lwp_ptable[lwp_running].sp);
-
    RESTORE_STATE();
 }
 
@@ -67,7 +66,6 @@ void lwp_exit() {
       lwp_ptable[i] = lwp_ptable[i + 1];
    }
    --lwp_procs;
-
    if (lwp_procs == 0) {
       lwp_stop();
    } else {
