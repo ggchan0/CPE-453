@@ -46,36 +46,52 @@ def sort_procs(procs):
 
 def executeFIFO(procs):
     time = 0
-    for proc in procs:
-        proc.waiting_time = time
-        proc.response_time = time + 1
-        proc.turnaround_time = time + proc.burst_time - proc.arrival_time
-        time += proc.burst_time
+    procs_left = len(procs)
+    while (procs_left > 0):
+        proc_scheduled = False
+        for proc in procs:
+            if (proc.arrival_time <= time and proc.time_remaining > 0):
+                proc.waiting_time = time
+                proc.response_time = time + 1
+                proc.turnaround_time = time + proc.burst_time - proc.arrival_time
+                time += proc.burst_time
+                procs_left -= 1
+        if (proc_scheduled == False):
+            time += 1
     return procs
 
 def executeRR(procs, quantum):
     time = procs[0].arrival_time
     procs_left = len(procs)
     while (procs_left > 0):
+        proc_scheduled = False
         for proc in procs:
-            if (proc.time_remaining <= quantum and proc.time_remaining > 0):
-                time += proc.time_remaining
-                proc.time_remaining = 0
-                procs_left -= 1
-                proc.waiting_time = time - proc.burst_time - proc.arrival_time
-                proc.response_time = proc.waiting_time + 1
-                proc.turnaround_time = time - proc.arrival_time
-            elif (proc.time_remaining > 0):
-                time += quantum
-                proc.time_remaining -= quantum
-
+            if (proc.arrival_time <= time):
+                if (proc.time_remaining <= quantum and proc.time_remaining > 0):
+                    if (proc.time_remaining == proc.burst_time):
+                        proc.response_time = time + 1
+                    time += proc.time_remaining
+                    proc.time_remaining = 0
+                    procs_left -= 1
+                    proc.waiting_time = time - proc.burst_time - proc.arrival_time
+                    proc.turnaround_time = time - proc.arrival_time
+                    proc_scheduled = True
+                elif (proc.time_remaining > 0):
+                    if (proc.time_remaining == proc.burst_time):
+                        proc.response_time = time + 1
+                    time += quantum
+                    proc.time_remaining -= quantum
+                    proc_scheduled = True
+        if (proc_scheduled == False):
+            time += 1
     return procs
 
 def executeSRJN(procs):
     time = 0
     procs_left = len(procs)
+    procs = procs.sorted(procs, key = lambda x: x.burst_time, reverse = False)
     while (procs_left > 0):
-        
+
     return procs
 
 def printProcStats(procs):
