@@ -1,0 +1,87 @@
+2 (t = 0, b = 2) (job number 0):
+
+FIFO:
+response 1
+turnaround 2
+wait 0
+
+RR q = 2:
+response 1
+turnaround 2
+wait 0
+
+SJRN:
+response 1
+turnaround 2
+wait 0
+
+-----------------------
+3 (t = 1, b = 5) (job number 1):
+
+FIFO:
+response 2
+turnaround 6
+wait 1
+
+RR q = 2:
+response 2
+turnaround 11
+wait 10
+
+SJRN: 
+response 2
+turnaround 7
+wait 3
+
+---------------------
+4 (t = 3, b = 1) (job number 2):
+FIFO:
+response 6
+turnaround 5
+wait 4
+
+rr q = 2:
+response 2
+turnaround 2
+wait 1
+
+srjn:
+response 1
+turnaround 1
+wait 0
+
+--------------------
+0 (t = 6, b = 3) (job number 3):
+
+FIFO:
+response 4
+turnaround 5
+wait 3
+
+rr q = 2:
+response 2
+turnaround 7
+wait 6
+
+srjn:
+response 5
+turnaround 7
+wait 4
+
+---------------------
+1 (t = 6, b = 2) (job number 4):
+
+FIFO:
+response 6
+turnaround 7
+wait 5
+
+rr q = 2:
+response 4
+turnaround 5
+wait 3
+
+srjn:
+response 3
+turnaround 4
+wait 2
