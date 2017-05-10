@@ -1,0 +1,39 @@
+1. Garrett Chan
+2/3.
+	-Execute schedSim with "python schedSim.py <file> <optional args>
+	-Flags -q and -p are not required
+	-Make sure that the input file is valid
+	-Compatible with either python 2 or python 3
+	-Run with python 2.7.6
+Questions:
+1. For what types of workloads does SRJN deliver the same turnaround times as FIFO?
+
+-The turnaround times will be similar if the burst times of the processes are all the same, or the jobs monotonically increase in size (second job > first job, third job > second job)
+
+2. For what types of workloads and quantum lengths does SRJN deliver the same response times as RR?
+
+-When the burst times are short, and the quantum length is as large or larger than the longest job
+
+3. What happens to response time with SRJN as job lengths increase? Can you use the simulator to demonstrate the trend?
+
+-The response time grows as the job length increases
+
+Input:
+40 17
+100 20
+800 23
+200 24
+801 60
+
+Output:
+Job   0 -- Response 1.00 Turnaround 40.00 Wait 0.00
+Job   1 -- Response 38.00 Turnaround 137.00 Wait 37.00
+Job   2 -- Response 335.00 Turnaround 1134.00 Wait 334.00
+Job   3 -- Response 134.00 Turnaround 333.00 Wait 133.00
+Job   4 -- Response 1098.00 Turnaround 1898.00 Wait 1097.00
+Average -- Response 321.20 Turnaround 708.40 Wait 320.20
+
+4. What happens to response times with RR as quantum lengths increase? Can you write an equation that gives the worst-case response time, given N jobs?
+
+-The response time grows alongside the quantum
+quantum * (N - 1)
