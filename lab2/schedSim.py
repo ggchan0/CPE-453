@@ -110,10 +110,9 @@ def executeRR(procs, quantum):
                     last_proc = proc.job_no
                     proc_scheduled = True
                 elif proc.time_remaining > 0:
-                    if last_proc == proc.job_no:
-                        streak += quantum
-                    else:
+                    if last_proc != proc.job_no:
                         streak = 0
+                    streak += quantum
                     if proc.response_time == -1:
                         proc.response_time = time - proc.arrival_time + 1
                     time += quantum
