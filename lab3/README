@@ -1,0 +1,6 @@
+-Garrett Chan
+-Lab 3 CPE 453
+-Usage: python memSim.py <reference-sequence-file.txt> <FRAMES> <PRA>
+-Note that the program doesn't accept flags
+-ex) python memSim.py addresses.txt 256 FIFO
+-OPT has an off by one error
