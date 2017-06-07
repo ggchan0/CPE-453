@@ -61,39 +61,3 @@ void closeDisk(int disk) {
       close(disk);
    }
 }
-
-int readByte(int disk, int block_num, int byte_num, void *block) {
-   int status = 0;
-   //check if disk is valid
-   if (fcntl(disk, F_GETFD) == -1 || block_num < 0) {
-      status = -1;
-   //check if buffer exists
-   } else if (block == NULL) {
-      status = -1;
-   //check if lseek worked
-   } else if (lseek(disk, block_num * BLOCKSIZE + byte_num, SEEK_SET) != block_num * BLOCKSIZE) {
-      status = -1;
-   } else {
-      read(disk, block, 1);
-   }
-
-   return status;
-}
-
-int writeByte(int disk, int block_num, int byte_num, void * block) {
-   int status = 0;
-   //check if disk is valid
-   if (fcntl(disk, F_GETFD) == -1 || block_num < 0) {
-      status = -1;
-   //check if buffer exists
-   } else if (block == NULL) {
-      status = -1;
-   //check if lseek worked
-   } else if (lseek(disk, block_num * BLOCKSIZE + byte_num, SEEK_SET) != block_num * BLOCKSIZE) {
-      status = -1;
-   } else {
-      write(disk, block, 1);
-   }
-
-   return status;
-}

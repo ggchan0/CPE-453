@@ -19,9 +19,28 @@
 //block metadata by the byte
 #define TYPE_BYTE 0
 #define MAGIC_BYTE 1
+//stores first free block for super block
+//stores first data block for inode
+//stores next data block for data block/file extent
+//stores next free block for a free block
 #define ADDR_BYTE 2
+
+//for the superblock
 #define FS_SIZE_BYTE 3
 #define SIZE_BYTE 4
+
+//for the inode
+#define PERMISSION_BYTE 6
+#define NAME_BYTE 8
+#define TIMESTAMP_SIZE 26
+#define CREATE_TIME_BYTE 20
+#define MOD_TIME_BYTE 46
+#define ACCESS_TIME_BYTE 72
+
+//timestamp bits
+#define CREATION 1
+#define MODIFICATION 2
+#define ACCESS 4
 
 //permission bits
 #define READ_ONLY 0
