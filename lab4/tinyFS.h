@@ -26,7 +26,6 @@
 #define ADDR_BYTE 2
 
 //for the superblock
-#define FS_SIZE_BYTE 3
 #define SIZE_BYTE 4
 
 //for the inode

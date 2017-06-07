@@ -11,6 +11,7 @@ fileEntry **file_table;
 openFile **open_file_table;
 freeBlock* head;
 
+
 void *checkedCalloc(int size) {
    void *data = calloc(1, size);
    if (data == NULL) {
@@ -26,24 +27,24 @@ int writeSuperblock() {
    superblock[TYPE_BYTE] = SUPERBLOCK;
    superblock[MAGIC_BYTE] = MAGIC_NUMBER;
    superblock[ADDR_BYTE] = 0;
-   superblock[FS_SIZE_BYTE] = 0;
-   superblock[SIZE_BYTE] = disk_size;
+   superblock[SIZE_BYTE] = num_blocks;
    status = writeBlock(disk_num, 0, superblock);
    return status;
 }
 
-void addFreeBlock(freeBlock *tail, int block_num) {
+freeBlock *addFreeBlock(freeBlock *tail, int block_num) {
    freeBlock *temp_block = checkedCalloc(sizeof(freeBlock));
    temp_block->next = NULL;
    temp_block->block_num = block_num;
    tail->next = temp_block;
    tail = tail->next;
+   return tail;
 }
 
 int popFreeBlock() {
    int block_num = -1;
    freeBlock *temp = head;
-   block_num = free_head->block_num;
+   block_num = head->block_num;
    if (head->next != NULL) {
       head = head->next;
       free(temp);
@@ -57,14 +58,13 @@ int setupFreeBlocks() {
    int i;
    int status = 0;
    char *block = checkedCalloc(sizeof(BLOCKSIZE));
-   freeBlock *tail, *temp;
+   freeBlock *tail;
    head = checkedCalloc(sizeof(freeBlock));
    head->block_num = 0;
    head->next = NULL;
    tail = head;
 
-   for (i = 1; i < disk_size; i++) {
-      freeBlock *temp_block;
+   for (i = 1; i < num_blocks; i++) {
       int free_block_num = i + 1;
       if (i + 1 == num_blocks) {
          free_block_num = 0;
@@ -73,7 +73,7 @@ int setupFreeBlocks() {
       block[MAGIC_BYTE] = MAGIC_NUMBER;
       block[ADDR_BYTE] = free_block_num;
       status |= writeBlock(disk_num, i, block);
-      addFreeBlock(tail, i);
+      tail = addFreeBlock(tail, i);
    }
    popFreeBlock();
    free(block);
@@ -85,14 +85,14 @@ int loadFiles() {
    char super_block_buf[BLOCKSIZE];
    char inode_buffer[BLOCKSIZE];
    char filename[9];
-   file_entry *file;
+   fileEntry *file;
 
    readBlock(disk_num, 0, super_block_buf);
-   totalFiles = super_block_buf[SIZE_BYTE];
-   for (i = 0; i < totalFiles; i++) {
+   total_files = super_block_buf[SIZE_BYTE];
+   for (i = 0; i < total_files; i++) {
       int index = 0;
       int inode_index = SIZE_BYTE + i + 1;
-      file = checkedCalloc(sizeof(file_entry));
+      file = checkedCalloc(sizeof(fileEntry));
       file->fd = i;
       file->inode_block_num = super_block_buf[inode_index];
       file->num_copies = 0;
@@ -111,14 +111,23 @@ int loadFiles() {
    return status;
 }
 
+freeBlock *getTail() {
+   freeBlock *temp = head;
+   while (temp->next != NULL) {
+      temp = temp->next;
+   }
+   return temp;
+}
+
 int loadAllData() {
    int status = 0, cur_block = 0, prev_block = 0;
    char buf[BLOCKSIZE];
-   if (free_head != NULL) {
+   freeBlock *temp;
+   if (head != NULL) {
       return status;
    }
    head = checkedCalloc(sizeof(freeBlock));
-   freeBlock *temp = head;
+   temp = head;
 
    head->block_num = 0;
    head->next = NULL;
@@ -127,7 +136,7 @@ int loadAllData() {
       prev_block = cur_block;
       status |= readBlock(disk_num, cur_block, buf);
       cur_block = (int) buf[ADDR_BYTE];
-      addFreeBlock(cur_block);
+      addFreeBlock(getTail(), cur_block);
    } while (cur_block != 0);
 
    popFreeBlock();
@@ -186,23 +195,23 @@ int saveAllData() {
    status |= writeBlock(disk_num, 0, buf);
 
    readBlock(disk_num, 0, buf);
-   free_block = temp->address;
-   block[ADDR_BYTE] = temp->block_num;
-   status |= writeBlock(disk_num, write_block, block);
+   free_block = temp->block_num;
+   empty_block[ADDR_BYTE] = temp->block_num;
+   status |= writeBlock(disk_num, write_block, empty_block);
    temp = temp->next;
    write_block = free_block;
 
    empty_block[TYPE_BYTE] = FREE_BLOCK;
    empty_block[MAGIC_BYTE] = MAGIC_NUMBER;
    while (temp != NULL) {
-      free_block = temp->address;
+      free_block = temp->block_num;
       empty_block[ADDR_BYTE] = free_block;
       status |= writeBlock(disk_num, write_block, empty_block);
       temp = temp->next;
       write_block = free_block;
    }
    free_block = 0;
-   empty_block[ADDR_BYTE] = address;
+   empty_block[ADDR_BYTE] = free_block;
    status |= writeBlock(disk_num, write_block, empty_block);
    free(empty_block);
 
@@ -210,9 +219,9 @@ int saveAllData() {
 }
 
 int tfs_unmount(void) {
-   free(file_table);
-   free(open_file_table);
    saveAllData();
+   free(file_table);
+   free(open_file_table);   
    return 0;
 }
 
@@ -221,7 +230,7 @@ char *getCurrentTime() {
    struct tm *time_info;
    char* time_string;
    time(&raw_time);
-   timeinfo = localtime(&raw_time);
+   time_info = localtime(&raw_time);
    time_string = asctime(time_info);
    return time_string;
 }
@@ -251,13 +260,13 @@ fileDescriptor tfs_openFile(char *name) {
       file->inode_block_num = -1;
       file->permissions = READ_WRITE;
    }
-   open_file->fd = openFiles;
+   open_file->fd = open_files;
    open_file->file_index = file->fd;
    open_file->first_block = -1;
    if (file_table[open_file->file_index]->inode_block_num != 0) {
       char buf[BLOCKSIZE];
       readBlock(disk_num, file_table[open_file->file_index]->inode_block_num, buf);
-      openFile->first_block = (int) buf[ADDR_BYTE];
+      open_file->first_block = (int) buf[ADDR_BYTE];
    }
    open_file->cur_position = 0;
    open_file_table[open_files++] = open_file;
@@ -266,7 +275,7 @@ fileDescriptor tfs_openFile(char *name) {
 
 void shiftOpenFileTable(int index) {
    int i;
-   free(open_filetable[index]);
+   free(open_file_table[index]);
    for(i = index; i < open_files - 1; i++){
       open_file_table[i] = open_file_table[i+1];
    }
@@ -277,7 +286,7 @@ int tfs_closeFile(fileDescriptor fd) {
    for (i = 0; i < open_files; i++) {
       if (open_file_table[i]->fd == fd) {
          int file_table_index = open_file_table[i]->file_index;
-         shiftOpenFileTable[i];
+         shiftOpenFileTable(i);
          file_table[file_table_index]->num_copies--;
          --open_files;
          break;
@@ -287,17 +296,21 @@ int tfs_closeFile(fileDescriptor fd) {
 }
 
 int tfs_writeFile(fileDescriptor fd, char *buffer, int size) {
-
+   int status = 0;
+   return status;
 }
 
 int tfs_deleteFile(fileDescriptor fd) {
-
+   int status = 0;
+   return status;
 }
 
 int tfs_readByte(fileDescriptor fd, char *buffer) {
-
+   int status = 0;
+   return status;
 }
 
 int tfs_seek(fileDescriptor fd, int offset) {
-
+   int status = 0;
+   return status;
 }

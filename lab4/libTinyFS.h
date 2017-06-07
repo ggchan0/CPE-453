@@ -17,13 +17,15 @@ typedef struct fileEntry {
    int inode_block_num;
    int num_copies;
    int permissions;
+   int file_size;
 } fileEntry;
 
 typedef struct openFile {
    fileDescriptor fd;
    int file_index;
+   int first_block;
    int cur_block;
    int cur_position;
-}
+} openFile;
 
 #endif
