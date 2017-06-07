@@ -59,7 +59,7 @@ class OPTPageTable:
         victim_no = -1
         for page in self.pages:
             opt_entries[page.page_no] = sys.maxint
-        for i in range(paging_count, len(self.addresses)):
+        for i in range(paging_count - 1, len(self.addresses)):
             page_no, offset = get_page_no_and_offset(self.addresses[i])
             opt_entries[page_no] = i
         sorted_opt_entries = sorted(opt_entries.items(), key = operator.itemgetter(1), reverse=True)
