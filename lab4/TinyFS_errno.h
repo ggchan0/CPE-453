@@ -9,5 +9,6 @@
 #define SAVE_ERROR -32
 #define WRITE_FAIL -64
 #define SEEK_FAIL -128
+#define DELETE_FAIL -256
 
 #endif
