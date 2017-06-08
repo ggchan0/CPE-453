@@ -593,6 +593,7 @@ int tfs_readByte(fileDescriptor fd, char *buffer) {
    status |= readBlock(disk_num, file->cur_block, cur_block_data);
 
 	if(status < 0) {
+		printf("Readblock failed.\n");
 		return status;
 	}
 
@@ -613,6 +614,7 @@ int tfs_seek(fileDescriptor fd, int offset) {
 
    char cur_block_data[BLOCKSIZE];
 
+   int file_table_index = getFileEntry(fd);
    int open_file_index = getOpenFile(fd);
    openFile *file = open_file_table[open_file_index];
 
@@ -641,22 +643,35 @@ int tfs_seek(fileDescriptor fd, int offset) {
 		file->cur_block = (int) cur_block_data[ADDR_BYTE];
 	}
 
+	//Change access time
+	file_table[file_table_index]->access_time = getCurrentTime();
+
 	return status;
 }
 
 // Renames a given file (by filename) to a new name
 int tfs_rename(char* old_name, char* new_name) {
 	int status = 0;
-	int new_file_index = findFileEntry(old_name);
+
+	int file_table_index = findFileEntry(old_name);
 
 	// Check to see if file exists
-	if(new_file_index < 0) {
+	if(file_table_index < 0) {
+		printf("File not found.\n");
 		return FILE_NOT_FOUND;
 	}
 
 	// Renames file + sets modification
-	file_table[new_file_index]->name = new_name;
-	file_table[new_file_index]->modification_time = getCurrentTime();
+	file_table[file_table_index]->name = realloc(file_table[file_table_index]->name, strlen(new_name));
+	file_table[file_table_index]->name = new_name;
+
+	if(file_table[file_table_index]->name == NULL)
+	{
+		return CALLOC_ERROR;
+	}
+
+	file_table[file_table_index]->modification_time = getCurrentTime();
+	file_table[file_table_index]->access_time = getCurrentTime();
 
 	return status;
 }
@@ -671,6 +686,115 @@ int tfs_readdir() {
 		printf("%s ", file_table[i]->name);
 	}
    printf("\n");
+
+	printf("\n");
+	return status;
+}
+
+// Makes a file read only
+int tfs_makeRO(char *filename) {
+	int status = 0;
+	int file_table_index = findFileEntry(filename);
+
+	// Check to see if file exists
+	if(file_table_index < 0) {
+		printf("File not found.\n");
+		return FILE_NOT_FOUND;
+	}
+
+	// Changes permission byto on a file + sets modification
+	file_table[file_table_index]->permissions = READ_ONLY;
+	file_table[file_table_index]->access_time = getCurrentTime();
+	file_table[file_table_index]->modification_time = getCurrentTime();
+
+	return status;
+}
+
+// Gives a file read and write permissions
+int tfs_makeRW(char *filename) {
+	int status = 0;
+	int file_table_index = findFileEntry(filename);
+
+	// Check to see if file exists
+	if(file_table_index < 0) {
+		printf("File not found.\n");
+		return FILE_NOT_FOUND;
+	}
+
+	// Changes permission byto on a file + sets modification
+	file_table[file_table_index]->permissions = READ_WRITE;
+	file_table[file_table_index]->access_time = getCurrentTime();
+	file_table[file_table_index]->modification_time = getCurrentTime();
+
+	return status;
+}
+
+// Writes a byte to an exact position inside the file to location 'offset'(absolute)
+int tfs_writeByte(fileDescriptor fd, int offset, unsigned char data)
+{
+   int status = 0;
+   char cur_block_data[BLOCKSIZE];
+   int open_file_index = getOpenFile(fd);
+
+   // Obtaining the openFile we are reading from
+   openFile *file = open_file_table[open_file_index];
+   int file_table_index = getFileEntry(file->file_index);
+   if (file == NULL) {
+      printf("Cannot find file in open file table\n");
+   	return FILE_NOT_FOUND;
+   }
+
+   if (file->cur_block == 0) {
+      printf("Can't read from empty file\n");
+      return READ_FILE_ERROR;
+   }
+
+   // Change the current position in the file to the new offset
+   file->cur_position = offset;
+
+   // Check to see if cur_position is already at the end of the file
+   if(file->cur_position >= file_table[file_table_index]->file_size) {
+      printf("Already reached the end of the file\n");
+   	return WRITE_FAIL;
+   }
+
+   status |= readBlock(disk_num, file->cur_block, cur_block_data);
+	if(status < 0) {
+		//readBlock failed
+		printf("Readblock failed.\n");
+		return status;
+	}
+
+	// Calculate the byte location in the block and update the byte
+	int block_location = file->cur_position % DATA_BLOCK_SIZE;
+	cur_block_data[block_location] = data;
+
+	file_table[file_table_index]->access_time = getCurrentTime();
+	file_table[file_table_index]->modification_time = getCurrentTime();
+
+	// Increments pointer position (from offset)
+   ++(file->cur_position);
+
+   return status;
+}
+
+int tfs_readFileInfo(int fd) {
+	int status = 0;
+	int file_table_index = getFileEntry(fd);
+	char* filename = file_table[file_table_index]->name;
+
+	if(file_table_index < 0) {
+		printf("File not found. \n");
+		return FILE_NOT_FOUND;
+	}
+
+	printf("File name: %s\n", filename);
+	printf("Creation time: %s\n", file_table[file_table_index]->creation_time);
+	printf("Last accessed: %s\n", file_table[file_table_index]->access_time);
+	printf("Last modified: %s\n", file_table[file_table_index]->modification_time);
+
+	// Update access time
+	file_table[file_table_index]->access_time = getCurrentTime();
 
 	return status;
 }
