@@ -84,10 +84,10 @@ int setupFreeBlocks() {
 
 int getFileSize(char *inode_buffer) {
    int size = 0;
-   size &= inode_buffer[INODE_SIZE_BYTE_0];
-   size &= (inode_buffer[INODE_SIZE_BYTE_1] << 8);
-   size &= (inode_buffer[INODE_SIZE_BYTE_2] << 16);
-   size &= (inode_buffer[INODE_SIZE_BYTE_3] << 24);
+   size += (int) inode_buffer[INODE_SIZE_BYTE_0];
+   size += ((int) inode_buffer[INODE_SIZE_BYTE_1]) << 8;
+   size += ((int) inode_buffer[INODE_SIZE_BYTE_2]) << 16;
+   size += ((int) inode_buffer[INODE_SIZE_BYTE_3]) << 24;
    return size;
 }
 
@@ -103,7 +103,7 @@ int loadFiles() {
    fileEntry *file;
 
    readBlock(disk_num, 0, super_block_buf);
-   total_files = super_block_buf[SIZE_BYTE];
+   total_files = (int) super_block_buf[SIZE_BYTE];
    for (i = 0; i < total_files; i++) {
       int index = 0;
       int inode_index = INODE_BYTE_START + i;
@@ -131,8 +131,10 @@ int getNumFreeBlocks() {
    int i = 0;
    freeBlock *temp = head;
    while (temp != NULL) {
-      ++i;
-      temp = temp->next;
+      if (temp->block_num != 0) {
+         ++i;
+         temp = temp->next;
+      }
    }
    return i;
 }
@@ -306,7 +308,6 @@ fileDescriptor tfs_openFile(char *name) {
    fileEntry *file;
 
    for (i = 0; i < total_files; i++) {
-      printf("here\n");
       if (strcmp(file_table[i]->name, name) == 0) {
          file = file_table[i];
          file_table[i]->num_copies++;
@@ -324,19 +325,21 @@ fileDescriptor tfs_openFile(char *name) {
       file->num_copies = 1;
       file->inode_block_num = 0;
       file->permissions = READ_WRITE;
+      file->file_size = 0;
       file_table[total_files++] = file;
    }
    open_file->fd = open_files;
    open_file->file_index = file->fd;
    open_file->first_block = 0;
+   open_file->cur_block = 0;
+   open_file->cur_position = 0;
    if (file_table[open_file->file_index]->inode_block_num != 0) {
       char buf[BLOCKSIZE];
       readBlock(disk_num, file_table[open_file->file_index]->inode_block_num, buf);
       open_file->first_block = (int) buf[ADDR_BYTE];
+      open_file->cur_block = open_file->first_block;
    }
 
-   open_file->cur_position = 0;
-   open_file->cur_block = 0;
    open_file_table[open_files++] = open_file;
    return open_file->fd;
 }
@@ -404,10 +407,10 @@ char *initINode(openFile *file, fileEntry *file_entry, int size) {
          block[NAME_BYTE + i] = file_entry->name[i];
       }
    }
-   block[INODE_SIZE_BYTE_0] = size * 0xFF;
-   block[INODE_SIZE_BYTE_1] = (size >> 8) * 0xFF;
-   block[INODE_SIZE_BYTE_2] = (size >> 16) * 0xFF;
-   block[INODE_SIZE_BYTE_3] = (size >> 24) * 0xFF;
+   block[INODE_SIZE_BYTE_0] = size & 0xFF;
+   block[INODE_SIZE_BYTE_1] = (size >> 8) & 0xFF;
+   block[INODE_SIZE_BYTE_2] = (size >> 16) & 0xFF;
+   block[INODE_SIZE_BYTE_3] = (size >> 24) & 0xFF;
    return block;
 }
 
@@ -418,20 +421,26 @@ int tfs_writeFile(fileDescriptor fd, char *buffer, int size) {
    int num_blocks_needed = size / DATA_BLOCK_SIZE + 2; //1 inode block + 1 data block;
    int open_file_index = getOpenFile(fd);
    int buffer_index = 0;
-   int inode_block_num = popFreeBlock();
    openFile *file = open_file_table[open_file_index];
    fileEntry *file_entry = file_table[file->file_index];
-   char *inode_block, temp_data_block[256];
+   char *inode_block, *temp_data_block = checkedCalloc(BLOCKSIZE);
    int next_block;
    if (file == NULL) {
       return FILE_NOT_FOUND;
    } else if (num_blocks_needed > num_free_blocks) {
+      printf("Not enough blocks to write file\n");
       return WRITE_FAIL;
    } else if (size == 0) {
+      printf("Must pass in buffer and size to write\n");
       return WRITE_FAIL;
    }
+   int inode_block_num = popFreeBlock();
+   file_entry->file_size = size;
+   file_entry->inode_block_num = inode_block_num;
    inode_block = initINode(file, file_entry, size);
    next_block = popFreeBlock();
+   file->first_block = next_block;
+   file->cur_block = next_block;
    for (i = 0; i < num_blocks_needed - 1; i++) {
       int block_index = DATA_START_BYTE;
       int cur_block = next_block;
@@ -441,6 +450,8 @@ int tfs_writeFile(fileDescriptor fd, char *buffer, int size) {
       }
       temp_data_block[TYPE_BYTE] = FILE_EXTENT;
       while (block_index != BLOCKSIZE && buffer_index != size) {
+         printf("s %d\n", block_index);
+         printf("%c %c\n", temp_data_block[block_index], buffer[buffer_index]);
          temp_data_block[block_index++] = buffer[buffer_index++];
       }
       if (buffer_index == size) {
@@ -451,6 +462,7 @@ int tfs_writeFile(fileDescriptor fd, char *buffer, int size) {
       }
       status |= writeBlock(disk_num, cur_block, temp_data_block);
    }
+
    free(inode_block);
    file->cur_position = 0;
    return status;
@@ -517,17 +529,22 @@ int tfs_readByte(fileDescriptor fd, char *buffer) {
    int status = 0;
    char cur_block_data[BLOCKSIZE];
    int open_file_index = getOpenFile(fd);
-   int file_table_index = getFileEntry(fd);
-
    // Obtaining the openFile we are reading from
    openFile *file = open_file_table[open_file_index];
-
-   if (file == NULL){
+   int file_table_index = getFileEntry(file->file_index);
+   if (file == NULL) {
+      printf("Cannot find file in open file table\n");
    	return FILE_NOT_FOUND;
+   }
+
+   if (file->cur_block == 0) {
+      printf("Can't read from empty file\n");
+      return READ_FILE_ERROR;
    }
 
    // Check to see if cur_position is already at the end of the file
    if(file->cur_position >= file_table[file_table_index]->file_size) {
+      printf("Already reached the end of the file\n");
    	return WRITE_FAIL;
    }
 
@@ -542,7 +559,8 @@ int tfs_readByte(fileDescriptor fd, char *buffer) {
 	buffer[0] = cur_block_data[data_position];
 
 	// Increments pointer position
-   ++file->cur_position;
+   ++(file->cur_position);
+
 
    return status;
 }
