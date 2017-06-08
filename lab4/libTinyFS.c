@@ -145,19 +145,22 @@ freeBlock *getTail() {
 
 int loadAllData() {
    int status = 0, cur_block = 0;
+   freeBlock *tail;
    char buf[BLOCKSIZE];
    if (head != NULL) {
       return status;
    }
    head = checkedCalloc(sizeof(freeBlock));
-
+   tail = head;
    head->block_num = 0;
    head->next = NULL;
 
    do {
       status |= readBlock(disk_num, cur_block, buf);
       cur_block = (int) buf[ADDR_BYTE];
-      addFreeBlock(getTail(), cur_block);
+      if (cur_block != 0) {
+         tail = addFreeBlock(tail, cur_block);
+      }
    } while (cur_block != 0);
 
    popFreeBlock();
@@ -203,7 +206,7 @@ int tfs_mount(char *filename) {
 }
 
 int saveAllData() {
-   int i, status = 0, free_block = 0, write_block = 0;;
+   int i, status = 0, cur_block = 0, next_block = 0;//free_block_num = 0, write_block_num = 0;
    char buf[BLOCKSIZE];
    freeBlock *temp = head;
    char *empty_block = checkedCalloc(BLOCKSIZE);
@@ -215,28 +218,56 @@ int saveAllData() {
    }
    status |= writeBlock(disk_num, 0, buf);
 
-   readBlock(disk_num, 0, buf);
-   free_block = temp->block_num;
-   empty_block[ADDR_BYTE] = temp->block_num;
-   status |= writeBlock(disk_num, write_block, empty_block);
-   temp = temp->next;
-   write_block = free_block;
-
-   empty_block[TYPE_BYTE] = FREE_BLOCK;
-   empty_block[MAGIC_BYTE] = MAGIC_NUMBER;
-   while (temp != NULL) {
-      free_block = temp->block_num;
-      empty_block[ADDR_BYTE] = free_block;
-      status |= writeBlock(disk_num, write_block, empty_block);
-      temp = temp->next;
-      write_block = free_block;
+   //no free blocks to save
+   if (temp->block_num == 0) {
+      free(empty_block);
+      return status;
    }
-   free_block = 0;
-   empty_block[ADDR_BYTE] = free_block;
-   status |= writeBlock(disk_num, write_block, empty_block);
+
+   readBlock(disk_num, 0, buf);
+   cur_block = temp->block_num;
+   buf[ADDR_BYTE] = cur_block;
+   status |= writeBlock(disk_num, 0, buf);
+   temp = temp->next;
+   while (temp != NULL) {
+      next_block = temp->block_num;
+      empty_block[TYPE_BYTE] = FREE_BLOCK;
+      empty_block[MAGIC_BYTE] = MAGIC_NUMBER;
+      empty_block[ADDR_BYTE] = next_block;
+      status |= writeBlock(disk_num, cur_block, empty_block);
+      cur_block = next_block;
+      temp = temp->next;
+   }
+   next_block = 0;
+   empty_block[ADDR_BYTE] = next_block;
+   status |= writeBlock(disk_num, cur_block, empty_block);
    free(empty_block);
 
    return status;
+
+   // //start saving the freeblocks
+   // readBlock(disk_num, 0, buf);
+   // free_block_num = temp->block_num;
+   // empty_block[ADDR_BYTE] = temp->block_num;
+   // status |= writeBlock(disk_num, write_block_num, empty_block);
+   // temp = temp->next;
+   // write_block_num = free_block_num;
+   //
+   // empty_block[TYPE_BYTE] = FREE_BLOCK;
+   // empty_block[MAGIC_BYTE] = MAGIC_NUMBER;
+   // while (temp != NULL) {
+   //    free_block = temp->block_num;
+   //    empty_block[ADDR_BYTE] = free_block_num;
+   //    status |= writeBlock(disk_num, write_block_num, empty_block);
+   //    temp = temp->next;
+   //    write_block_num = free_block_num;
+   // }
+   // free_block_num = 0;
+   // empty_block[ADDR_BYTE] = free_block_num;
+   // status |= writeBlock(disk_num, write_block_num, empty_block);
+   // free(empty_block);
+   //
+   // return status;
 }
 
 int tfs_unmount(void) {
@@ -483,6 +514,7 @@ int tfs_readByte(fileDescriptor fd, char *buffer) {
 
 int tfs_seek(fileDescriptor fd, int offset) {
    int status = 0;
+
    char cur_block_data[BLOCKSIZE];
 
    int open_file_index = getOpenFile(fd);
