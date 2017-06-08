@@ -267,7 +267,7 @@ int saveAllData() {
 
    for (i = 0; i < total_files; i++) {
       if (file_table[i]->inode_block_num != 0) {
-         buf[SIZE_BYTE + valid_files] = file_table[i]->inode_block_num;
+         buf[INODE_BYTE_START + valid_files] = file_table[i]->inode_block_num;
          updateINode(file_table[i]);
          ++valid_files;
       }
@@ -309,8 +309,12 @@ int saveAllData() {
 
 int tfs_unmount(void) {
    saveAllData();
+   open_files = 0;
+   total_files = 0;
+   head = NULL;
    free(file_table);
    free(open_file_table);
+   close(disk_num);
    return 0;
 }
 
@@ -332,7 +336,6 @@ fileDescriptor tfs_openFile(char *name) {
 
    for (i = 0; i < total_files; i++) {
       if (strcmp(file_table[i]->name, name) == 0) {
-         printf("copy\n");
          file = file_table[i];
          file_table[i]->num_copies++;
          new_file = 0;
@@ -667,7 +670,6 @@ int tfs_rename(char* old_name, char* new_name) {
 	{
 		return CALLOC_ERROR;
 	}
-   sleep(1);
 	file_table[file_table_index]->modification_time = getCurrentTime();
 	file_table[file_table_index]->access_time = getCurrentTime();
 
@@ -793,8 +795,8 @@ int tfs_readFileInfo(int fd) {
 	printf("Last modified: %s\n", file_table[file_table_index]->modification_time);
 
 	// Update access time
+   sleep(1);
 	file_table[file_table_index]->access_time = getCurrentTime();
-   sleep(2);
 
 	return status;
 }

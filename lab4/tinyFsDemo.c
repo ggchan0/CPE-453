@@ -62,12 +62,40 @@ int main(void) {
    printf("Files on the system: ");
    tfs_readdir();
    tfs_readFileInfo(bar);
-   printf("Deleting baz.txt\n");
-   printf("Deletion status code %d\n", tfs_deleteFile(bar));
    printf("Files on the system: ");
    tfs_readdir();
 
    tfs_unmount();
+   printf("Mounting again\n");
+   tfs_mount("test.txt");
+   printf("Files on the system: ");
+   tfs_readdir();
+   bar = tfs_openFile("baz.txt");
+   tfs_readFileInfo(bar);
+   printf("Deleting baz.txt\n");
+   printf("Deletion status code %d\n\n", tfs_deleteFile(bar));
+   printf("Preparing file that is 300 bytes, > 1 block\n");
+   int big_file = tfs_openFile("big_file.txt");
+   char chunk[300];
+   for (int i = 0; i < 300; i++) {
+      chunk[i] = '1';
+   }
+   chunk[299] = '7';
+   printf("Chunk write status: %d\n", tfs_writeFile(big_file, chunk, 300));
+   tfs_readByte(big_file, buf);
+   printf("Chunk first bit: %c\n", buf[0]);
+   tfs_seek(big_file, 299);
+   tfs_readByte(big_file, buf);
+   printf("Chunk last bit: %c\n", buf[0]);
+   tfs_readdir();
+   tfs_readFileInfo(big_file);
+   printf("Free blocks: %d\n\n", getNumFreeBlocks());
+   printf("Deleting big_file\n");
+   printf("Deletion status code %d\n\n", tfs_deleteFile(big_file));
+   printf("Free blocks: %d\n\n", getNumFreeBlocks());
+   printf("Files on the system: ");
+   tfs_readdir();
+
    return 0;
 }
 
