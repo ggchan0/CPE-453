@@ -374,6 +374,17 @@ int tfs_closeFile(fileDescriptor fd) {
    return status;
 }
 
+// Returns the file's fd using the file name
+int findFileEntry(char* filename) {
+	int i;
+	for(i = 9; i < total_files; ++i) {
+		if (strcmp(file_table[i]->name, filename) == 0) {
+			return i;
+		}
+	}
+	return -4;
+}
+
 int getOpenFile(fileDescriptor fd) {
    int i;
    for (i = 0; i < open_files; i++) {
@@ -597,6 +608,36 @@ int tfs_seek(fileDescriptor fd, int offset) {
 		}
 
 		file->cur_block = (int) cur_block_data[ADDR_BYTE];
+	}
+
+	return status;
+}
+
+// Renames a given file (by filename) to a new name
+int tfs_rename(char* old_name, char* new_name) {
+	int status = 0;
+	int new_file_index = findFileEntry(old_name);
+	
+	// Check to see if file exists
+	if(new_file_index < 0) {
+		return FILE_NOT_FOUND;
+	}
+
+	// Renames file + sets modification
+	file_table[new_file_index]->name = new_name;
+	file_table[new_file_index]->modification_time = getCurrentTime();
+
+	return status;
+}
+
+// Traverses file table and prints out file names
+int tfs_readdir() {
+	int status = 0;
+	int i;
+
+	// Traverse through every file entry
+	for(i = 0; i < total_files; ++i) {
+		printf("%s ", file_table[i]->name);
 	}
 
 	return status;
