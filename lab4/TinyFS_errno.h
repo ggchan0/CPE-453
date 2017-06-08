@@ -10,5 +10,6 @@
 #define WRITE_FAIL -64
 #define SEEK_FAIL -128
 #define DELETE_FAIL -256
+#define BAD_PERMISSIONS -512
 
 #endif

@@ -47,10 +47,60 @@ int tfs_readByte(fileDescriptor FD, char *buffer);
 
 int tfs_seek(fileDescriptor FD, int offset);
 
+void *checkedCalloc(int size);
+
+int writeSuperblock();
+
+freeBlock *addFreeBlock(freeBlock *tail, int block_num);
+
+int popFreeBlock();
+
+int setupFreeBlocks();
+
+int getFileSize(char *inode_buffer);
+
+void getFileTimes(fileEntry *file, char *inode_buffer);
+
+int loadFiles();
+
 int getNumFreeBlocks();
+
+freeBlock *getTail();
+
+int loadAllData();
+
+void updateINode(fileEntry *file);
+
+int saveAllData();
+
+char *getCurrentTime();
+
+void shiftOpenFileTable(int index);
+
+void shiftFileTable(int index);
+
+int findFileEntry(char* filename);
+
+int getOpenFile(fileDescriptor fd);
+
+int getFileEntry(fileDescriptor fd);
+
+char *initINode(openFile *file, fileEntry *file_entry, int size);
+
+void printBlockChain(int start_block);
+
+int tfs_rename(char* old_name, char* new_name);
+
+int tfs_makeRO(char *filename);
+
+int tfs_makeRW(char *filename);
+
+int tfs_writeByte(fileDescriptor fd, int offset, unsigned char data);
+
+int tfs_readFileInfo(int fd);
 
 int tfs_readdir();
 
-char *getCurrentTime();
+
 
 #endif

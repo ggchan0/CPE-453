@@ -252,6 +252,8 @@ void updateINode(fileEntry *file) {
       buf[ACCESS_TIME_BYTE + i] = file->access_time[i];
    }
 
+   buf[PERMISSION_BYTE] = file->permissions;
+
    writeBlock(disk_num, file->inode_block_num, buf);
 }
 
@@ -337,6 +339,7 @@ fileDescriptor tfs_openFile(char *name) {
          break;
       }
    }
+
    if (new_file) {
       file = malloc(sizeof(fileEntry));
       file->name = strdup(name);
@@ -367,11 +370,11 @@ fileDescriptor tfs_openFile(char *name) {
 }
 
 void shiftOpenFileTable(int index) {
-   int i;
+   //int i;
    free(open_file_table[index]);
-   for (i = index; i < open_files - 1; i++) {
-      open_file_table[i] = open_file_table[i + 1];
-   }
+   //for (i = index; i < open_files - 1; i++) {
+   //   open_file_table[i] = open_file_table[i + 1];
+   //}
 }
 
 void shiftFileTable(int index) {
@@ -399,7 +402,7 @@ int tfs_closeFile(fileDescriptor fd) {
 // Returns the file's fd using the file name
 int findFileEntry(char* filename) {
 	int i;
-	for(i = 9; i < total_files; ++i) {
+	for (i = 0; i < total_files; ++i) {
 		if (strcmp(file_table[i]->name, filename) == 0) {
 			return i;
 		}
@@ -470,6 +473,7 @@ int tfs_writeFile(fileDescriptor fd, char *buffer, int size) {
    char *inode_block, *temp_data_block = checkedCalloc(BLOCKSIZE);
    int next_block;
    if (file == NULL) {
+      printf("File not found\n");
       return FILE_NOT_FOUND;
    } else if (num_blocks_needed > num_free_blocks) {
       printf("Not enough blocks to write file\n");
@@ -477,6 +481,9 @@ int tfs_writeFile(fileDescriptor fd, char *buffer, int size) {
    } else if (size == 0) {
       printf("Must pass in buffer and size to write\n");
       return WRITE_FAIL;
+   } else if (file_entry->permissions == READ_ONLY) {
+      printf("Cannot write over read only file\n");
+      return BAD_PERMISSIONS;
    }
    int inode_block_num = popFreeBlock();
    file_entry->file_size = size;
@@ -506,6 +513,7 @@ int tfs_writeFile(fileDescriptor fd, char *buffer, int size) {
    }
 
    free(inode_block);
+   free(temp_data_block);
    file->cur_position = 0;
    return status;
 }
@@ -525,6 +533,10 @@ int tfs_deleteFile(fileDescriptor fd) {
    int file_table_index = file_entry->fd;
    if (tail_value <= 0) {
       free_list_empty = 1;
+   }
+   if (file_entry->permissions == READ_ONLY) {
+      printf("Can't delete read only file\n");
+      return(BAD_PERMISSIONS);
    }
    cur_block = file_entry->inode_block_num;
    while (cur_block != 0) {
@@ -551,21 +563,6 @@ int tfs_deleteFile(fileDescriptor fd) {
    }
    return status;
 }
-
-// int tfs_deleteFile(fileDescriptor fd) {
-//    int i, status = 0;
-//    for (i = 0; i < total_files; i++) {
-//       if (file_table[i]->num_copies == 0) {
-//          shiftFileTable(i);
-//          --total_files;
-//       } else {
-//          printf("Cannot delete file while open\n");
-//          return DELETE_FAIL;
-//       }
-//       return status;
-//    }
-//    return FILE_NOT_FOUND;
-// }
 
 int tfs_readByte(fileDescriptor fd, char *buffer) {
    int status = 0;
@@ -614,15 +611,16 @@ int tfs_seek(fileDescriptor fd, int offset) {
 
    char cur_block_data[BLOCKSIZE];
 
-   int file_table_index = getFileEntry(fd);
+
    int open_file_index = getOpenFile(fd);
    openFile *file = open_file_table[open_file_index];
+   int file_table_index = file->file_index;
 
    if (file == NULL) {
       return FILE_NOT_FOUND;
    }
 
-   if (offset > file_table[getFileEntry(fd)]->file_size) { // Offset goes past the actual file size
+   if (offset > file_table[file_table_index]->file_size) { // Offset goes past the actual file size
    	return SEEK_FAIL;
    }
 
@@ -706,7 +704,10 @@ int tfs_makeRO(char *filename) {
 	file_table[file_table_index]->permissions = READ_ONLY;
 	file_table[file_table_index]->access_time = getCurrentTime();
 	file_table[file_table_index]->modification_time = getCurrentTime();
-
+   char num[26];
+   strcpy(num, getCurrentTime());
+   num[26] = 0;
+   printf("%s\n", num);
 	return status;
 }
 
@@ -730,8 +731,7 @@ int tfs_makeRW(char *filename) {
 }
 
 // Writes a byte to an exact position inside the file to location 'offset'(absolute)
-int tfs_writeByte(fileDescriptor fd, int offset, unsigned char data)
-{
+int tfs_writeByte(fileDescriptor fd, int offset, unsigned char data) {
    int status = 0;
    char cur_block_data[BLOCKSIZE];
    int open_file_index = getOpenFile(fd);
@@ -742,11 +742,12 @@ int tfs_writeByte(fileDescriptor fd, int offset, unsigned char data)
    if (file == NULL) {
       printf("Cannot find file in open file table\n");
    	return FILE_NOT_FOUND;
-   }
-
-   if (file->cur_block == 0) {
+   } else if (file->cur_block == 0) {
       printf("Can't read from empty file\n");
       return READ_FILE_ERROR;
+   } else if (file_table[file_table_index]->permissions == READ_ONLY) {
+      printf("Can't write over read only file\n");
+      return BAD_PERMISSIONS;
    }
 
    // Change the current position in the file to the new offset
@@ -780,7 +781,9 @@ int tfs_writeByte(fileDescriptor fd, int offset, unsigned char data)
 
 int tfs_readFileInfo(int fd) {
 	int status = 0;
-	int file_table_index = getFileEntry(fd);
+	//int file_table_index = getFileEntry(fd);
+   openFile *file = open_file_table[fd];
+   int file_table_index = file->file_index;
 	char* filename = file_table[file_table_index]->name;
 
 	if(file_table_index < 0) {
