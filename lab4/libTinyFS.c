@@ -92,7 +92,30 @@ int getFileSize(char *inode_buffer) {
 }
 
 void getFileTimes(fileEntry *file, char *inode_buffer) {
+   int i = 0;
+   char *mod_time = malloc(TIMESTAMP_SIZE * sizeof(char));
+   char *creat_time = malloc(TIMESTAMP_SIZE * sizeof(char));
+   char *acc_time = malloc(TIMESTAMP_SIZE * sizeof(char));
 
+   for (i = 0; i < TIMESTAMP_SIZE; i++) {
+      creat_time[i] = inode_buffer[CREATE_TIME_BYTE + i];
+   }
+   creat_time[i] = '\0';
+
+   for (i = 0; i < TIMESTAMP_SIZE; i++) {
+      mod_time[i] = inode_buffer[MOD_TIME_BYTE + i];
+   }
+   mod_time[i] = '\0';
+
+   for (i = 0; i < TIMESTAMP_SIZE; i++) {
+      acc_time[i] = inode_buffer[ACCESS_TIME_BYTE + i];
+   }
+
+   acc_time[i] = '\0';
+
+   file->modification_time = mod_time;
+   file->creation_time = creat_time;
+   file->access_time = acc_time;
 }
 
 int loadFiles() {
@@ -211,6 +234,27 @@ int tfs_mount(char *filename) {
    return status;
 }
 
+void updateINode(fileEntry *file) {
+   int i, name_length = strlen(file->name);
+   char buf[BLOCKSIZE];
+   readBlock(disk_num, file->inode_block_num, buf);
+   for (i = 0; i < NAME_BYTE; i++) {
+      if (i > name_length) {
+         buf[NAME_BYTE + i] = '\0';
+      } else {
+         buf[NAME_BYTE + i] = file->name[i];
+      }
+   }
+
+   for (i = 0; i < TIMESTAMP_SIZE; i++) {
+      buf[MOD_TIME_BYTE + i] = file->modification_time[i];
+      buf[CREATE_TIME_BYTE + i] = file->creation_time[i];
+      buf[ACCESS_TIME_BYTE + i] = file->access_time[i];
+   }
+
+   writeBlock(disk_num, file->inode_block_num, buf);
+}
+
 int saveAllData() {
    int i, status = 0, cur_block = 0, next_block = 0, valid_files = 0;//free_block_num = 0, write_block_num = 0;
    char buf[BLOCKSIZE];
@@ -219,9 +263,10 @@ int saveAllData() {
    freeBlock *cur;
    readBlock(disk_num, 0, buf);
 
-   for (i = 1; i <= total_files; i++) {
-      if (file_table[i - 1]->inode_block_num != 0) {
-         buf[SIZE_BYTE + i] = file_table[i - 1]->inode_block_num;
+   for (i = 0; i < total_files; i++) {
+      if (file_table[i]->inode_block_num != 0) {
+         buf[SIZE_BYTE + valid_files] = file_table[i]->inode_block_num;
+         updateINode(file_table[i]);
          ++valid_files;
       }
    }
@@ -258,30 +303,6 @@ int saveAllData() {
    free(empty_block);
 
    return status;
-
-   // //start saving the freeblocks
-   // readBlock(disk_num, 0, buf);
-   // free_block_num = temp->block_num;
-   // empty_block[ADDR_BYTE] = temp->block_num;
-   // status |= writeBlock(disk_num, write_block_num, empty_block);
-   // temp = temp->next;
-   // write_block_num = free_block_num;
-   //
-   // empty_block[TYPE_BYTE] = FREE_BLOCK;
-   // empty_block[MAGIC_BYTE] = MAGIC_NUMBER;
-   // while (temp != NULL) {
-   //    free_block = temp->block_num;
-   //    empty_block[ADDR_BYTE] = free_block_num;
-   //    status |= writeBlock(disk_num, write_block_num, empty_block);
-   //    temp = temp->next;
-   //    write_block_num = free_block_num;
-   // }
-   // free_block_num = 0;
-   // empty_block[ADDR_BYTE] = free_block_num;
-   // status |= writeBlock(disk_num, write_block_num, empty_block);
-   // free(empty_block);
-   //
-   // return status;
 }
 
 int tfs_unmount(void) {
@@ -309,6 +330,7 @@ fileDescriptor tfs_openFile(char *name) {
 
    for (i = 0; i < total_files; i++) {
       if (strcmp(file_table[i]->name, name) == 0) {
+         printf("copy\n");
          file = file_table[i];
          file_table[i]->num_copies++;
          new_file = 0;
@@ -425,8 +447,19 @@ char *initINode(openFile *file, fileEntry *file_entry, int size) {
    return block;
 }
 
+void printBlockChain(int start_block) {
+   char buf[BLOCKSIZE];
+   readBlock(disk_num, start_block, buf);
+   int next_block = (int) buf[ADDR_BYTE];
+   printf("start %d\n", start_block);
+   while (next_block != 0) {
+      printf("next %d\n", next_block);
+      readBlock(disk_num, next_block, buf);
+      next_block = (int) buf[ADDR_BYTE];
+   }
+}
+
 int tfs_writeFile(fileDescriptor fd, char *buffer, int size) {
-   //tfs_deleteFile(fd);
    int i, status = 0;
    int num_free_blocks = getNumFreeBlocks();
    int num_blocks_needed = size / DATA_BLOCK_SIZE + 2; //1 inode block + 1 data block;
@@ -461,8 +494,6 @@ int tfs_writeFile(fileDescriptor fd, char *buffer, int size) {
       }
       temp_data_block[TYPE_BYTE] = FILE_EXTENT;
       while (block_index != BLOCKSIZE && buffer_index != size) {
-         printf("s %d\n", block_index);
-         printf("%c %c\n", temp_data_block[block_index], buffer[buffer_index]);
          temp_data_block[block_index++] = buffer[buffer_index++];
       }
       if (buffer_index == size) {
@@ -617,7 +648,7 @@ int tfs_seek(fileDescriptor fd, int offset) {
 int tfs_rename(char* old_name, char* new_name) {
 	int status = 0;
 	int new_file_index = findFileEntry(old_name);
-	
+
 	// Check to see if file exists
 	if(new_file_index < 0) {
 		return FILE_NOT_FOUND;
@@ -639,6 +670,7 @@ int tfs_readdir() {
 	for(i = 0; i < total_files; ++i) {
 		printf("%s ", file_table[i]->name);
 	}
+   printf("\n");
 
 	return status;
 }

@@ -1,7 +1,7 @@
 #include "libTinyFS.h"
 
 void reset() {
-   tfs_mkfs("test.txt", 4 * BLOCKSIZE);
+   tfs_mkfs("test.txt", 8 * BLOCKSIZE);
    tfs_unmount();
    exit(0);
 }
@@ -18,11 +18,21 @@ int main(void) {
    int fd = tfs_openFile(filename);
    printf("fd %d\n", fd);
 
-   int delete_status = tfs_deleteFile(fd);
-   printf("delete_status %d\n", delete_status);
+   //int delete_status = tfs_deleteFile(fd);
+   //printf("delete_status %d\n", delete_status);
 
-   // int write_status = tfs_writeFile(fd, "hello", 5);
-   // printf("write_status %d\n", write_status);
+   tfs_readdir();
+
+   char buf[300];
+   for (int i = 0; i < 300; i++) {
+      buf[i] = 'a';
+   }
+
+   int write_status = tfs_writeFile(fd, buf, 300);
+   printf("write_status %d\n", write_status);
+
+   printf("%s\n", getCurrentTime());
+
    //
    // for (int i = 0; i < 5; i++) {
    //    char buf[1];

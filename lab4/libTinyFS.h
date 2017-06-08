@@ -49,4 +49,8 @@ int tfs_seek(fileDescriptor FD, int offset);
 
 int getNumFreeBlocks();
 
+int tfs_readdir();
+
+char *getCurrentTime();
+
 #endif
