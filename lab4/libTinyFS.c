@@ -442,6 +442,38 @@ int tfs_readByte(fileDescriptor fd, char *buffer) {
    return status;
 }
 
-int tfs_seek(fileDescriptor fd, int offset) {
 
+int tfs_seek(fileDescriptor fd, int offset) {
+   int status = 0;
+   char cur_block_data[BLOCKSIZE];
+
+   int open_file_index = getOpenFile(fd);
+   openFile *file = open_file_table[open_file_index];
+
+   if (file == NULL) {
+      return FILE_NOT_FOUND;
+   }
+
+   if (offset > file_table[getFileEntry(fd)]->file_size) { // Offset goes past the actual file size
+   	return SEEK_FAIL;
+   }
+
+   file->cur_position = offset;
+
+	int num_blocks_traversed = offset / DATA_BLOCK_SIZE;
+	file->cur_block = file->first_block;
+
+	int i;
+	for(i = 0; i < num_blocks_traversed; ++i)
+	{
+		status |= readBlock(disk_num, file->cur_block, cur_block_data); // Getting contents of block to get next addr
+
+		if(status < 0) {
+			return status;
+		}
+
+		file->cur_block = (int) cur_block_data[ADDR_BYTE];
+	}
+
+	return status;
 }
