@@ -317,10 +317,10 @@ int tfs_unmount(void) {
 char *getCurrentTime() {
    time_t raw_time;
    struct tm *time_info;
-   char* time_string;
+   char* time_string = malloc(sizeof(char) * TIMESTAMP_SIZE);
    time(&raw_time);
    time_info = localtime(&raw_time);
-   time_string = asctime(time_info);
+   strcpy(time_string, asctime(time_info));
    return time_string;
 }
 
@@ -343,9 +343,9 @@ fileDescriptor tfs_openFile(char *name) {
    if (new_file) {
       file = malloc(sizeof(fileEntry));
       file->name = strdup(name);
-      file->creation_time = strdup(getCurrentTime());
-      file->modification_time = strdup(file->creation_time);
-      file->access_time = strdup(file->creation_time);
+      file->creation_time = getCurrentTime();
+      file->modification_time = file->creation_time;
+      file->access_time = file->creation_time;
       file->fd = total_files;
       file->num_copies = 1;
       file->inode_block_num = 0;
@@ -667,7 +667,7 @@ int tfs_rename(char* old_name, char* new_name) {
 	{
 		return CALLOC_ERROR;
 	}
-
+   sleep(1);
 	file_table[file_table_index]->modification_time = getCurrentTime();
 	file_table[file_table_index]->access_time = getCurrentTime();
 
@@ -704,10 +704,6 @@ int tfs_makeRO(char *filename) {
 	file_table[file_table_index]->permissions = READ_ONLY;
 	file_table[file_table_index]->access_time = getCurrentTime();
 	file_table[file_table_index]->modification_time = getCurrentTime();
-   char num[26];
-   strcpy(num, getCurrentTime());
-   num[26] = 0;
-   printf("%s\n", num);
 	return status;
 }
 
@@ -798,6 +794,7 @@ int tfs_readFileInfo(int fd) {
 
 	// Update access time
 	file_table[file_table_index]->access_time = getCurrentTime();
+   sleep(2);
 
 	return status;
 }

@@ -45,7 +45,7 @@ int main(void) {
    printf("Readbyte status code: %d\n", tfs_readByte(bar, buf));
    printf("Character read: %c\n", buf[0]);
 
-   printf("\nMaking bar read only\n");
+   printf("\nMaking bar read only and attempting to write a byte to it\n");
    tfs_makeRO("bar.txt");
    printf("Writing byte to read only bar.txt status code: %d\n\n", tfs_writeByte(bar, 2, '!'));
 
@@ -61,10 +61,13 @@ int main(void) {
    tfs_makeRW("baz.txt");
    printf("Files on the system: ");
    tfs_readdir();
+   tfs_readFileInfo(bar);
    printf("Deleting baz.txt\n");
    printf("Deletion status code %d\n", tfs_deleteFile(bar));
    printf("Files on the system: ");
    tfs_readdir();
+
+   tfs_unmount();
    return 0;
 }
 
