@@ -7,6 +7,6 @@
 #define READ_FILE_ERROR -8
 #define LOAD_ERROR -16
 #define SAVE_ERROR -32
-
+#define WRITE_FAIL -64
 
 #endif

@@ -27,14 +27,23 @@
 
 //for the superblock
 #define SIZE_BYTE 4
+#define INODE_BYTE_START 5
 
 //for the inode
 #define PERMISSION_BYTE 6
 #define NAME_BYTE 8
+#define INODE_SIZE_BYTE_0 16
+#define INODE_SIZE_BYTE_1 17
+#define INODE_SIZE_BYTE_2 18
+#define INODE_SIZE_BYTE_3 19
 #define TIMESTAMP_SIZE 26
 #define CREATE_TIME_BYTE 20
 #define MOD_TIME_BYTE 46
 #define ACCESS_TIME_BYTE 72
+
+//for the data block
+#define DATA_BLOCK_SIZE 252
+#define DATA_START_BYTE 4
 
 //timestamp bits
 #define CREATION 1
