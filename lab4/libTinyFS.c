@@ -333,6 +333,16 @@ int getOpenFile(fileDescriptor fd) {
    return -1;
 }
 
+int getFileEntry(fileDescriptor fd) {
+   int i;
+   for (i = 0; i < total_files; i++) {
+      if (file_table[i]->fd == fd) {
+         return i;
+      }
+   }
+   return -1;
+}
+
 char *initINode(openFile *file, fileEntry *file_entry, int size, int *inode_block_num) {
    int i, name_size = strlen(file_entry->name);
    char *block = checkedCalloc(BLOCKSIZE);
@@ -438,6 +448,29 @@ int tfs_deleteFile(fileDescriptor fd) {
 
 int tfs_readByte(fileDescriptor fd, char *buffer) {
    int status = 0;
+   char cur_block_data[BLOCKSIZE];
+   int open_file_index = getOpenFile(fd);
+   int file_table_index = getFileEntry(fd);
+
+   // Obtaining the openFile we are reading from
+   openFile *file = open_file_table[open_file_index]; 
+
+   if (file == NULL){
+   	return FILE_NOT_FOUND;
+   }
+
+   // check to see if cur_position is already at the end of the file
+   if(file->cur_position >= file_table[file_table_index]->file_size) {
+   	return WRITE_FAIL;
+   }
+
+   status |= readBlock(disk_num, file->cur_block, cur_block_data);
+
+	if(status < 0) {
+		return status;
+	}
+
+   ++file->cur_position;
 
    return status;
 }
