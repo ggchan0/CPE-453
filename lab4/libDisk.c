@@ -1,5 +1,9 @@
 #include "libDisk.h"
 
+int fileSize(int disk) {
+   return lseek(disk, 0, SEEK_END);
+}
+
 int openDisk(char *filename, int nBytes) {
    int file = -1;
    int i = 0;
@@ -28,9 +32,10 @@ int readBlock(int disk, int bNum, void *block) {
    } else if (block == NULL) {
       status = -1;
    //check if lseek worked
-   } else if (lseek(disk, bNum * BLOCKSIZE, SEEK_SET) != bNum * BLOCKSIZE) {
+   } else if (bNum * BLOCKSIZE > fileSize(disk) - 256) {
       status = -1;
    } else {
+      lseek(disk, bNum * BLOCKSIZE, SEEK_SET);
       read(disk, block, BLOCKSIZE);
    }
 
@@ -47,9 +52,10 @@ int writeBlock(int disk, int bNum, void *block) {
    } else if (block == NULL) {
       status = -1;
    //check if lseek worked
-   } else if (lseek(disk, bNum * BLOCKSIZE, SEEK_SET) != bNum * BLOCKSIZE) {
+   } else if (bNum * BLOCKSIZE > fileSize(disk) - 256) {
       status = -1;
    } else {
+      lseek(disk, bNum * BLOCKSIZE, SEEK_SET);
       write(disk, block, BLOCKSIZE);
    }
 

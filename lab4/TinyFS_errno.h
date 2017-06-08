@@ -8,5 +8,6 @@
 #define LOAD_ERROR -16
 #define SAVE_ERROR -32
 #define WRITE_FAIL -64
+#define SEEK_FAIL -128
 
 #endif
